@@ -33,6 +33,16 @@ sed -i "s/encryption=.*/encryption='psk2+ccmp'/g" $WIFI_FILE
 #修改WIFI密码
 sed -i "/set wireless.default_\${dev}.encryption='psk2+ccmp'/a \\\t\t\t\t\t\set wireless.default_\${dev}.key='password'" $WIFI_FILE
 
+
+orig_version=$(cat "package/emortal/default-settings/files/99-default-settings-chinese" | grep DISTRIB_REVISION= | awk -F "'" '{print $2}')
+#VERSION=$(grep "^PRETTY_NAME="package/base-files/files/etc/os-release | cut -d'=' -f2 | tr -d '"')
+VERSION=$(grep "PRETTY_NAME=" package/base-files/files/usr/lib/os-release | cut -d'=' -f2)
+#sed -i "s/openwrt 24.10.3 /R${date_version} by vx:Mr___zjz  /g" package/emortal/default-settings/files/99-default-settings-chinese
+
+#sed -i '/^exit 0$/i sed -i "s,OPENWRT_RELEASE=.*, ${VERSION} 编译日期：${date_version}  by 微信:Mr___zjz  ,g" package/base-files/files/usr/lib/os-release' package/emortal/default-settings/files/99-default-settings-chinese
+sed -i '/^exit 0$/i sed -i "s,OPENWRT_RELEASE=.*,'"${VERSION}"' 编译日期：'"${date_version}"'  by 微信:Mr___zjz  ,g" package/base-files/files/usr/lib/os-release' \package/emortal/default-settings/files/99-default-settings-chinese
+
+
 #安装和更新软件包
 UPDATE_PACKAGE() {
 	local PKG_NAME=$1
