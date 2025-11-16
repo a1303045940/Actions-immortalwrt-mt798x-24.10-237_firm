@@ -63,7 +63,10 @@ jobs:
           echo "upload_firmware=${{ env.UPLOAD_FIRMWARE }}" >> $GITHUB_OUTPUT
           echo "upload_release=${{ env.UPLOAD_RELEASE }}" >> $GITHUB_OUTPUT
           echo "tz=${{ env.TZ }}" >> $GITHUB_OUTPUT
-
+          
+      - name: Check space usage
+        if: (!cancelled())
+        run: df -hT
   free-disk:
     name: 释放 Ubuntu 磁盘空间（在编译前）
     runs-on: ubuntu-latest
@@ -75,6 +78,7 @@ jobs:
         continue-on-error: true
         timeout-minutes: 15
         with:
+        
           remove_android: true
           remove_dotnet: true
           remove_haskell: true
@@ -88,6 +92,9 @@ jobs:
           # 如果释放空间不够可在remove_folders添加/usr/local/lib/node_modules
           # 如果释放空间不够可将remove_android改为true
           
+      - name: Check space usage
+        if: (!cancelled())
+        run: df -hT
 
   call-builder:
     needs: setup
