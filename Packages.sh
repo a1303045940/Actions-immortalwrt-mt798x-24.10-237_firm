@@ -143,6 +143,7 @@ UPDATE_VERSION "luci-app-passwall"
 UPDATE_VERSION "luci-app-passwall2"
 UPDATE_VERSION "luci-app-store"
 UPDATE_VERSION "luci-app-openclash"
+UPDATE_VERSION "luci-app-argon-config"
 
 
 # 解决 quickstart 插件编译提示不支持压缩
