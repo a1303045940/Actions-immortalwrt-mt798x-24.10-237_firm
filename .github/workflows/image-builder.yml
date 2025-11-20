@@ -148,10 +148,7 @@ jobs:
         run: cd openwrt && ./scripts/feeds update -a
 
       - name: Install feeds
-        run: | 
-            cd openwrt && ./scripts/feeds install -a
-            make package/feeds/packages/libxcrypt/clean
-            make package/feeds/packages/libxcrypt/compile V=s 2>&1 | tee libxcrypt-build.log
+        run: cd openwrt && ./scripts/feeds install -a
 
       - name: Custom Packages 
         run: | 
