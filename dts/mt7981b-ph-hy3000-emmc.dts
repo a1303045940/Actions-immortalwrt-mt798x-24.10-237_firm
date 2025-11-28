@@ -20,7 +20,8 @@
 	};
 
 	chosen {
-		bootargs = "root=PARTLABEL=rootfs rootwait";
+		#bootargs = "root=PARTLABEL=rootfs rootwait";
+		bootargs = "root=PARTLABEL=rootfs rootwait rootfstype=squashfs overlayfs=f2fs";
 		stdout-path = "serial0:115200n8";
 	};
 
