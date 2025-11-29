@@ -164,17 +164,6 @@ jobs:
           cd ./openwrt/package/
           bash "$GITHUB_WORKSPACE/Packages.sh"
 
-
-          
-      - name: Update feeds
-        run: cd openwrt && ./scripts/feeds update -a
-
-      - name: Install feeds
-        run: |
-          export LANG=en_US.UTF-8
-          export LC_ALL=en_US.UTF-8
-          cd openwrt && ./scripts/feeds install -a
-          
       - name: Load custom configuration
         run: |
           [ -e files ] && mv files openwrt/files
