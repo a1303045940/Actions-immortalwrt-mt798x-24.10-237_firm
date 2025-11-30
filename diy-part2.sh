@@ -84,11 +84,21 @@ echo "CONFIG_PACKAGE_kmod-ipt-nat=y" >> .config
 echo "CONFIG_PACKAGE_kmod-bridge=y" >> .config
 echo "CONFIG_PACKAGE_kmod-netfilter=y" >> .config
 
-# 修复 libxcrypt 编译警告
+
+# 解决 libxcrypt 因 -Werror=format-nonliteral 导致的编译错误
 LIBXCRYPT_MAKEFILE="feeds/packages/libs/libxcrypt/Makefile"
 if [ -f "$LIBXCRYPT_MAKEFILE" ]; then
     sed -i '/CFLAGS="\$(TARGET_CFLAGS) -Wno-format-nonliteral"/d' "$LIBXCRYPT_MAKEFILE"
+    # 向 CONFIGURE_ARGS 中注入 CFLAGS，禁用格式非字面量警告
     sed -i '/CONFIGURE_ARGS +=/a \	CFLAGS="\$(TARGET_CFLAGS) -Wno-format-nonliteral" \\' "$LIBXCRYPT_MAKEFILE"
+    if grep -q 'CFLAGS="\$(TARGET_CFLAGS) -Wno-format-nonliteral"' "$LIBXCRYPT_MAKEFILE"; then
+        echo "✅ 设置libxcrypt编译参数为忽略警告"
+    else
+        echo "❌ 设置libxcrypt编译参数失败" >&2
+        exit 1
+    fi
+else
+    echo "ℹ️ 未找到 libxcrypt 的 Makefile，跳过修改"
 fi
 
 # 解决 quickstart 插件编译提示不支持压缩
