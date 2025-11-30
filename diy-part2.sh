@@ -4,83 +4,76 @@
 # File name: diy-part2.sh
 # Description: OpenWrt DIY script part 2 (After Update feeds)
 #
-# Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
-#
-# This is free software, licensed under the MIT License.
-# See /LICENSE for more information.
-#
 
-# Modify default IP
-#sed -i 's/192.168.1.1/192.168.50.5/g' package/base-files/files/bin/config_generate
+# =========================================================
+# 1. 优先修复 Golang 环境 (解决 Xray, Docker 等编译失败的关键)
+# =========================================================
+rm -rf feeds/packages/lang/golang
+git clone https://github.com/sbwml/packages_lang_golang -b 22.x feeds/packages/lang/golang
+# 注意：25.x 分支可能对某些旧源码不兼容，建议用 22.x 或 master，或者根据你之前的成功经验保持 25.x
+# 如果你之前用 25.x 成功了，就保留 25.x
 
-# Modify default theme
-#sed -i 's/luci-theme-bootstrap/luci-theme-argon/g' feeds/luci/collections/luci/Makefile
+# =========================================================
+# 2. 清理可能有问题的官方包 (Ruby, Docker 等)
+# =========================================================
+# 移除 Ruby 以防止编码报错 (Invalid byte sequence)
+rm -rf feeds/packages/lang/ruby
 
-# Modify hostname
-#sed -i 's/OpenWrt/P3TERX-Router/g' package/base-files/files/bin/config_generate
-# Git稀疏克隆，只克隆指定目录到本地
+# 移除 Docker 源码 (防止编译失败，建议后续通过 opkg 安装)
+rm -rf feeds/packages/utils/docker
+rm -rf feeds/packages/utils/dockerd
 
-function git_sparse_clone() {
-  branch="$1" repourl="$2" && shift 2
-  git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
-  repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
-  cd $repodir && git sparse-checkout set $@  
-  mv -f $@ ../package
-  cd .. && rm -rf $repodir
-}
+# =========================================================
+# 3. 克隆/替换第三方插件
+# =========================================================
 
-# theme
+# Theme Argon
 rm -rf feeds/luci/themes/luci-theme-argon
 git clone https://github.com/jerrykuku/luci-theme-argon.git package/luci-theme-argon
 git clone https://github.com/jerrykuku/luci-app-argon-config.git package/luci-app-argon-config
 
-# passwall
+# Passwall & Dependencies
+# 先移除冲突的包
 rm -rf feeds/packages/net/{xray-core,v2ray-geodata,sing-box,chinadns-ng,dns2socks,hysteria,ipt2socks,microsocks,naiveproxy,shadowsocks-libev,shadowsocks-rust,shadowsocksr-libev,simple-obfs,tcping,trojan-plus,tuic-client,v2ray-plugin,xray-plugin,geoview,shadow-tls}
-git clone https://github.com/xiaorouji/openwrt-passwall-packages package/passwall-packages
 
+# 克隆 Passwall 依赖和主程序
+git clone https://github.com/xiaorouji/openwrt-passwall-packages package/passwall-packages
 rm -rf feeds/luci/applications/luci-app-passwall
 git clone https://github.com/xiaorouji/openwrt-passwall package/passwall-luci
-# git clone https://github.com/xiaorouji/openwrt-passwall2 package/passwall2-luci
 
-# ssr-plus
-# rm -rf package/helloworld
-# git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworldd
-# git -C package/helloworld pull
-
-# mosdns
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang -b 25.x feeds/packages/lang/golang
-
-
-#rm -rf feeds/packages/net/mosdns
-#git clone https://github.com/sbwml/luci-app-mosdns -b v5 package/mosdns
-
-# tailscale
+# Tailscale
 sed -i '/\/etc\/init\.d\/tailscale/d;/\/etc\/config\/tailscale/d;' feeds/packages/net/tailscale/Makefile
 git clone https://github.com/asvow/luci-app-tailscale package/luci-app-tailscale
 
-
 # iStore
+function git_sparse_clone() {
+  branch="$1" repourl="$2" && shift 2
+  git clone --depth=1 -b $branch --single-branch --filter=blob:none --sparse $repourl
+  repodir=$(echo $repourl | awk -F '/' '{print $(NF)}')
+  cd $repodir && git sparse-checkout set $@
+  mv -f $@ ../package
+  cd .. && rm -rf $repodir
+}
 git_sparse_clone main https://github.com/linkease/istore-ui app-store-ui
 git_sparse_clone main https://github.com/linkease/istore luci
 
-# easytier
+# EasyTier
 git clone -b optional-easytier-web --single-branch https://github.com/icyray/luci-app-easytier package/luci-app-easytier
 sed -i 's/util.pcdata/xml.pcdata/g' package/luci-app-easytier/luci-app-easytier/luasrc/model/cbi/easytier.lua
 
-# defconfig
-# cp -f ../.config .config
-# cp -f defconfig/mt7981-ax3000.config .config
+# =========================================================
+# 4. 系统配置调整 (.config, Makefile, DTS 等)
+# =========================================================
+
+# 修改版本号
 sed -i 's|IMG_PREFIX:=|IMG_PREFIX:=$(shell TZ="Asia/Shanghai" date +"%Y%m%d")-24.10-6.6-|' include/image.mk
 
-#cp "$GITHUB_WORKSPACE/r30b1/mt7981b-clt-r30b1.dts" target/linux/mediatek/dts/mt7981b-clt-r30b1.dts
-
+# 复制 DTS 和配置文件
 cp -f "$GITHUB_WORKSPACE/dts/filogic.mk" "target/linux/mediatek/image/filogic.mk"
 cp -f "$GITHUB_WORKSPACE/dts/mt7981b-ph-hy3000-emmc.dts" "target/linux/mediatek/dts/mt7981b-ph-hy3000-emmc.dts"
 cp -f "$GITHUB_WORKSPACE/dts/mt7981b-bt-r320-emmc.dts" "target/linux/mediatek/dts/mt7981b-bt-r320-emmc.dts"
 cp -f "$GITHUB_WORKSPACE/dts/mt7981b-sl-3000-emmc.dts" "target/linux/mediatek/dts/mt7981b-sl-3000-emmc.dts"
 cp -f "$GITHUB_WORKSPACE/dts/02_network" "target/linux/mediatek/filogic/base-files/etc/board.d/02_network"
-
 cp -f "$GITHUB_WORKSPACE/dts/01_leds" "target/linux/mediatek/filogic/base-files/etc/board.d/01_leds"
 cp -f "$GITHUB_WORKSPACE/dts/platform.sh" "target/linux/mediatek/filogic/base-files/lib/upgrade/platform.sh"
 cp -f "$GITHUB_WORKSPACE/dts/mediatek_filogic" "package/boot/uboot-envtools/files/mediatek_filogic"
@@ -91,23 +84,28 @@ chmod +x package/base-files/files/etc/npc.conf
 
 echo "PH-HY3000和BT-R320 dts文件替换成功"
 
-# 强制禁用 ruby 编译
-sed -i 's/CONFIG_PACKAGE_ruby=y/# CONFIG_PACKAGE_ruby is not set/' .config
+# =========================================================
+# 5. 最终配置修正 (Sed 命令)
+# =========================================================
 
-# 解决 libxcrypt 因 -Werror=format-nonliteral 导致的编译错误
+# 强制禁用 Ruby 和 Docker (双重保险)
+sed -i 's/CONFIG_PACKAGE_ruby=y/# CONFIG_PACKAGE_ruby is not set/' .config
+sed -i 's/CONFIG_PACKAGE_docker=y/# CONFIG_PACKAGE_docker is not set/' .config
+sed -i 's/CONFIG_PACKAGE_dockerd=y/# CONFIG_PACKAGE_dockerd is not set/' .config
+sed -i 's/CONFIG_PACKAGE_luci-app-dockerman=y/# CONFIG_PACKAGE_luci-app-dockerman is not set/' .config
+
+# 启用 Docker 内核支持 (为 opkg 安装做准备)
+echo "CONFIG_PACKAGE_kmod-docker-internal=y" >> .config
+echo "CONFIG_PACKAGE_kmod-veth=y" >> .config
+echo "CONFIG_PACKAGE_kmod-ipt-nat=y" >> .config
+echo "CONFIG_PACKAGE_kmod-bridge=y" >> .config
+echo "CONFIG_PACKAGE_kmod-netfilter=y" >> .config
+
+# 修复 libxcrypt 编译警告
 LIBXCRYPT_MAKEFILE="feeds/packages/libs/libxcrypt/Makefile"
 if [ -f "$LIBXCRYPT_MAKEFILE" ]; then
     sed -i '/CFLAGS="\$(TARGET_CFLAGS) -Wno-format-nonliteral"/d' "$LIBXCRYPT_MAKEFILE"
-    # 向 CONFIGURE_ARGS 中注入 CFLAGS，禁用格式非字面量警告
     sed -i '/CONFIGURE_ARGS +=/a \	CFLAGS="\$(TARGET_CFLAGS) -Wno-format-nonliteral" \\' "$LIBXCRYPT_MAKEFILE"
-    if grep -q 'CFLAGS="\$(TARGET_CFLAGS) -Wno-format-nonliteral"' "$LIBXCRYPT_MAKEFILE"; then
-        echo "✅ 设置libxcrypt编译参数为忽略警告"
-    else
-        echo "❌ 设置libxcrypt编译参数失败" >&2
-        exit 1
-    fi
-else
-    echo "ℹ️ 未找到 libxcrypt 的 Makefile，跳过修改"
 fi
 
 # 解决 quickstart 插件编译提示不支持压缩
