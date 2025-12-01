@@ -13,5 +13,8 @@
 # 这里的 golang 会在 update feeds 时被拉取到 feeds/golang 目录
 # echo 'src-git golang https://github.com/sbwml/packages_lang_golang;25.x' >> feeds.conf.default
 # echo 'src-git golang https://github.com/sbwml/packages_lang_golang' >> feeds.conf.default
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/orgx2812/golang feeds/packages/lang/golang
+
+# 移除官方 golang 定义
+sed -i '/golang/d' feeds.conf.default
+# 添加 orgx2812 的 golang 源（假设这个仓库包含了 Go 1.25+）
+echo 'src-git golang https://github.com/orgx2812/golang' >> feeds.conf.default
